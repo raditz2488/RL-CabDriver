@@ -4,6 +4,7 @@ import numpy as np
 import math
 import random
 from itertools import product
+from sklearn.preprocessing import OneHotEncoder
 
 # Defining hyperparameters
 m = 5 # number of cities, ranges from 1 ..... m
@@ -31,7 +32,16 @@ class CabDriver():
         
         # The initial state is initialized by picking a random state from state space.
         self.state_init = random.sample(self.state_space, 1)[0]
-
+        
+        # Prepare a one hot encoder for preparing the input vector to use later
+        array = np.ones((24, 3))
+        array[0:5, 0:1] = locations.reshape((5,1))
+        array[0:24, 1:2] = time_range.reshape((24,1))
+        array[0:7, 2:3] = days_range.reshape((7,1))
+        
+        self.enc = OneHotEncoder()
+        self.enc.fit(array)
+        
         # Start the first round
         self.reset()
 
