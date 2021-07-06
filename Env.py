@@ -18,12 +18,18 @@ class CabDriver():
     def __init__(self):
         """initialise your state and define your action space and state space"""
         
-        cities = np.arange(1,6)
+        locations = np.arange(1,6)
         time_range = np.arange(0,24)
         days_range = np.arange(0,7)
         
-        self.action_space = [x for x in list(product(cities, cities)) if x[0] != x[1]]
-        self.state_space = list(product(cities, time_range, days_range))
+        # Action space is the cartesian product of the locations that the cab can travel to.
+        # The pick and drop locations cannot be same so we drop such actions
+        self.action_space = [x for x in list(product(locations, locations)) if x[0] != x[1]]
+        
+        # The state space is the cartesian product of the locations
+        self.state_space = list(product(locations, time_range, days_range))
+        
+        # The initial state is initialized by picking a random state from state space.
         self.state_init = random.sample(self.state_space, 1)[0]
 
         # Start the first round
