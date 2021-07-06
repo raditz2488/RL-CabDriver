@@ -22,9 +22,9 @@ class CabDriver():
         time_range = np.arange(0,24)
         days_range = np.arange(0,7)
         
-        self.action_space = 
+        self.action_space = [x for x in list(product(cities, cities)) if x[0] != x[1]]
         self.state_space = list(product(cities, time_range, days_range))
-        self.state_init = 
+        self.state_init = random.sample(self.state_space, 1)[0]
 
         # Start the first round
         self.reset()
