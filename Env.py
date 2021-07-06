@@ -27,7 +27,9 @@ class CabDriver():
         # The pick and drop locations cannot be same so we drop such actions
         self.action_space = [x for x in list(product(locations, locations)) if x[0] != x[1]]
         
-        # The state space is the cartesian product of the locations
+        # The state space is the cartesian product of the locations, time_range and days_range
+        # State is represented as a tuple (Location, time of the day, day)
+        # Thus state space is array of the tuple described above
         self.state_space = list(product(locations, time_range, days_range))
         
         # The initial state is initialized by picking a random state from state space.
@@ -50,7 +52,8 @@ class CabDriver():
 
     def state_encod_arch1(self, state):
         """convert the state into a vector so that it can be fed to the NN. This method converts a given state into a vector format. Hint: The vector is of size m + t + d."""
-
+        # Use one hot encoder to get a one hot encoded format for the state
+        state_encod = self.enc.transform([state]).toarray()[0]
         return state_encod
 
 
