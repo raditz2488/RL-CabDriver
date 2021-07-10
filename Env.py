@@ -112,6 +112,7 @@ class CabDriver():
         curr_day = state[2]
         
         if pickup == 0 and drop == 0:
+            # No action so the reward is negative C
             reward = -C
         else:
             # Indexing starts with 0, and our location values like vary between 1 to 5.
@@ -130,6 +131,41 @@ class CabDriver():
 
     def next_state_func(self, state, action, Time_matrix):
         """Takes state and action as input and returns next state"""
+        pickup = action[0]
+        drop = action[1]
+        
+        curr_loc = state[0]
+        curr_time = state[1]
+        curr_day = state[2]
+        
+        if pickup == 0 and drop == 0:
+            # No action so the next state's location remains the same
+            next_loc = curr_loc
+            
+            # No action so the next state's time is incremented by 1 and then other calculations are done.
+            next_time = curr_time + 1
+        else:
+            # Action taken so next state's location will be the drop location
+            next_loc = drop
+            
+            # Adjustments for lookup in the time_matrix
+            curr_loc -= 1
+            pickup -= 1
+            drop -= 1
+            
+            # Action is taken. So the next state's time is incremented by time_matrix value for the pick and drop 
+            # and hr and day and then other calculations are done.
+            next_time = curr_time + self.time_matrix[curr_loc][pickup] + self.time_matrix[pickup][drop]  
+            
+            
+        if next_time > 23:
+            # The max time increment is by 11. So the calculation below is sufficient for incrementing the days.
+            next_time = next_time % 24
+            next_day = curr_day + 1
+        else:
+            next_day = curr_day
+            
+        next_state = (next_loc, next_time, next_day)
         return next_state
 
 
