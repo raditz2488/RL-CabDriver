@@ -19,13 +19,13 @@ class CabDriver():
     def __init__(self):
         """initialise your state and define your action space and state space"""
         
-        locations = np.arange(1,6)
+        locations = np.arange(0,5)
         time_range = np.arange(0,24)
         days_range = np.arange(0,7)
         
         # Action space is the cartesian product of the locations that the cab can travel to.
         # The pick and drop locations cannot be same so we drop such actions
-        self.action_space = [x for x in list(product(locations, locations)) if x[0] != x[1]]
+        self.action_space = [x for x in list(product(locations, locations)) if x[0] != x[1] or x[0] == 0]
         
         # The state space is the cartesian product of the locations, time_range and days_range
         # State is represented as a tuple (Location, time of the day, day)
@@ -36,16 +36,13 @@ class CabDriver():
         self.state_init = random.sample(self.state_space, 1)[0]
         
         # Prepare a one hot encoder for preparing the input vector to use later
-        array = np.ones((24, 3))
+        array = np.zeros((24, 3))
         array[0:5, 0:1] = locations.reshape((5,1))
         array[0:24, 1:2] = time_range.reshape((24,1))
         array[0:7, 2:3] = days_range.reshape((7,1))
         
         self.enc = OneHotEncoder()
         self.enc.fit(array)
-        
-        # Load the time matrix
-        self.time_matrix = np.load('TM.npy')
         
         # Start the first round
         self.reset()
@@ -91,17 +88,43 @@ class CabDriver():
         if requests >15:
             requests =15
 
-        # We want indexes with range(0,20)
-        possible_actions_index = random.sample(range(0, (m-1)*m), requests) 
+        # We want indexes with range(1,21)
+        possible_actions_index = random.sample(range(1, (m-1)*m + 1), requests) 
         actions = [self.action_space[i] for i in possible_actions_idx]
 
-        # Append the action (0,0) meaning the driver chose to ignore requests.
+        # Append the action (0,0) which means and represents the driver chose to ignore requests.
         actions.append((0,0))
 
         return possible_actions_index,actions   
 
 
-
+    def start_time_and_start_day(self, state, action, Time_matrix):
+        """Takes in state, action and Time-matrix and returns the start_time and start_date for a journey"""
+        pickup = action[0]
+        drop = action[1]
+        
+        curr_loc = state[0]
+        curr_time = state[1]
+        curr_day = state[2]
+        
+        if curr_loc == pickup:
+            # Current location and pickup location is same so the start time and start day is the same
+            start_time = curr_time
+            start_day = curr_day
+        else:
+            # Current location and pickup location are different
+            # The start time is cuurent time + time travelling from current location to the pickup location.
+            start_time = curr_time + self.Time_matrix[curr_loc][pickup][curr_time][curr_day]
+        
+            if start_time > 23:
+                # Start time is more than 23 that means we need to readjust for next day
+                start_time = start_time % 24
+                start_day = curr_day + 1
+            else:
+                start_day = curr_day
+                
+        return (start_time, start_day)
+    
     def reward_func(self, state, action, Time_matrix):
         """Takes in state, action and Time-matrix and returns the reward"""
         pickup = action[0]
@@ -110,19 +133,18 @@ class CabDriver():
         curr_loc = state[0]
         curr_time = state[1]
         curr_day = state[2]
-        
+            
         if pickup == 0 and drop == 0:
             # No action so the reward is negative C
             reward = -C
         else:
-            # Indexing starts with 0, and our location values like vary between 1 to 5.
-            # So we need to subtract 1 from each curr_loc, pickup and drop values to use for indexing time_matrix
-            curr_loc -= 1
-            pickup -= 1
-            drop -= 1
+            start_time, start_day = start_time_and_start_day(state, action, Time_matrix)
             
-            reward = R * self.time_matrix[pickup][drop] - C * (self.time_matrix[pickup][drop] + self.time_matrix[curr_loc][pickup])
-        
+            non_trip_duration = self.Time_matrix[curr_loc][pickup][curr_time][curr_day]
+            
+            trip_duration = self.Time_matrix[pickup][drop][start_time][start_day]
+            
+            reward = R * trip_duration - C * (non_trip_duration + trip_duration)
         
         return reward
 
@@ -138,6 +160,9 @@ class CabDriver():
         curr_time = state[1]
         curr_day = state[2]
         
+        
+        start_time, start_day = start_time_and_start_day(state, action, Time_matrix)
+        
         if pickup == 0 and drop == 0:
             # No action so the next state's location remains the same
             next_loc = curr_loc
@@ -148,22 +173,19 @@ class CabDriver():
             # Action taken so next state's location will be the drop location
             next_loc = drop
             
-            # Adjustments for lookup in the time_matrix
-            curr_loc -= 1
-            pickup -= 1
-            drop -= 1
+            
             
             # Action is taken. So the next state's time is incremented by time_matrix value for the pick and drop 
             # and hr and day and then other calculations are done.
-            next_time = curr_time + self.time_matrix[curr_loc][pickup] + self.time_matrix[pickup][drop]  
+            next_time = start_time + self.time_matrix[pickup][drop][start_time][start_day] 
             
             
         if next_time > 23:
             # The max time increment is by 11. So the calculation below is sufficient for incrementing the days.
             next_time = next_time % 24
-            next_day = curr_day + 1
+            next_day = start_day + 1
         else:
-            next_day = curr_day
+            next_day = start_day
             
         next_state = (next_loc, next_time, next_day)
         return next_state
