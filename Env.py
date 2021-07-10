@@ -43,6 +43,8 @@ class CabDriver():
         
         self.enc = OneHotEncoder()
         self.enc.fit(array)
+
+        self.days_since_start = 0
         
         # Start the first round
         self.reset()
@@ -98,7 +100,7 @@ class CabDriver():
         return possible_actions_index,actions   
 
 
-    def start_time_and_start_day(self, state, action, Time_matrix):
+    def journey_start_time_and_start_day(self, state, action, Time_matrix):
         """Takes in state, action and Time-matrix and returns the start_time and start_date for a journey"""
         pickup = action[0]
         drop = action[1]
@@ -120,6 +122,10 @@ class CabDriver():
                 # Start time is more than 23 that means we need to readjust for next day
                 start_time = start_time % 24
                 start_day = curr_day + 1
+                
+                if start_day > 6:
+                    start_day = start_day % 7
+                
             else:
                 start_day = curr_day
                 
@@ -138,7 +144,7 @@ class CabDriver():
             # No action so the reward is negative C
             reward = -C
         else:
-            start_time, start_day = start_time_and_start_day(state, action, Time_matrix)
+            start_time, start_day = journey_start_time_and_start_day(state, action, Time_matrix)
             
             non_trip_duration = self.Time_matrix[curr_loc][pickup][curr_time][curr_day]
             
@@ -161,7 +167,7 @@ class CabDriver():
         curr_day = state[2]
         
         
-        start_time, start_day = start_time_and_start_day(state, action, Time_matrix)
+        start_time, start_day = journey_start_time_and_start_day(state, action, Time_matrix)
         
         if pickup == 0 and drop == 0:
             # No action so the next state's location remains the same
@@ -184,14 +190,31 @@ class CabDriver():
             # The max time increment is by 11. So the calculation below is sufficient for incrementing the days.
             next_time = next_time % 24
             next_day = start_day + 1
+            
+            if next_day > 6:
+                next_day = next_day % 7
+            
         else:
             next_day = start_day
             
         next_state = (next_loc, next_time, next_day)
         return next_state
 
+    
+    def step(self, state, action, Time_matrix):
+        reward = reward_func(state, action, Time_matrix)
+        next_state = next_state_func(state, action, Time_matrix)
 
+        if next_state[2] > state[2]:
+            self.days_since_start += 1
 
+        if self.days_since_start > 30:
+            is_terminal = True
+        else:
+            is_terminal = False
+
+        return (next_state, reward, is_terminal)
 
     def reset(self):
-        return self.action_space, self.state_space, self.state_init
+        self.days_since_start = 0
+        return self.action_space, self.state_space, self.state_init, self.days_since_start
