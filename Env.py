@@ -44,6 +44,9 @@ class CabDriver():
         self.enc = OneHotEncoder()
         self.enc.fit(array)
         
+        # Load the time matrix
+        self.time_matrix = np.load('TM.npy')
+        
         # Start the first round
         self.reset()
 
@@ -101,6 +104,25 @@ class CabDriver():
 
     def reward_func(self, state, action, Time_matrix):
         """Takes in state, action and Time-matrix and returns the reward"""
+        pickup = action[0]
+        drop = action[1]
+        
+        curr_loc = state[0]
+        curr_time = state[1]
+        curr_day = state[2]
+        
+        if pickup == 0 and drop == 0:
+            reward = -C
+        else:
+            # Indexing starts with 0, and our location values like vary between 1 to 5.
+            # So we need to subtract 1 from each curr_loc, pickup and drop values to use for indexing time_matrix
+            curr_loc -= 1
+            pickup -= 1
+            drop -= 1
+            
+            reward = R * self.time_matrix[pickup][drop] - C * (self.time_matrix[pickup][drop] + self.time_matrix[curr_loc][pickup])
+        
+        
         return reward
 
 
