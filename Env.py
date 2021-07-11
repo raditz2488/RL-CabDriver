@@ -106,7 +106,7 @@ class CabDriver():
         drop = action[1]
         
         curr_loc = state[0]
-        curr_time = state[1]
+        curr_time = int(state[1])
         curr_day = state[2]
         
         if curr_loc == pickup:
@@ -116,7 +116,7 @@ class CabDriver():
         else:
             # Current location and pickup location are different
             # The start time is cuurent time + time travelling from current location to the pickup location.
-            start_time = curr_time + self.Time_matrix[curr_loc][pickup][curr_time][curr_day]
+            start_time = curr_time + Time_matrix[curr_loc][pickup][curr_time][curr_day]
         
             if start_time > 23:
                 # Start time is more than 23 that means we need to readjust for next day
@@ -129,7 +129,7 @@ class CabDriver():
             else:
                 start_day = curr_day
                 
-        return (start_time, start_day)
+        return (int(start_time), int(start_day))
     
     def reward_func(self, state, action, Time_matrix):
         """Takes in state, action and Time-matrix and returns the reward"""
@@ -137,18 +137,18 @@ class CabDriver():
         drop = action[1]
         
         curr_loc = state[0]
-        curr_time = state[1]
+        curr_time = int(state[1])
         curr_day = state[2]
             
         if pickup == 0 and drop == 0:
             # No action so the reward is negative C
             reward = -C
         else:
-            start_time, start_day = journey_start_time_and_start_day(state, action, Time_matrix)
+            start_time, start_day = self.journey_start_time_and_start_day(state, action, Time_matrix)
             
-            non_trip_duration = self.Time_matrix[curr_loc][pickup][curr_time][curr_day]
-            
-            trip_duration = self.Time_matrix[pickup][drop][start_time][start_day]
+            non_trip_duration = Time_matrix[curr_loc][pickup][curr_time][curr_day]
+
+            trip_duration = Time_matrix[pickup][drop][start_time][start_day]
             
             reward = R * trip_duration - C * (non_trip_duration + trip_duration)
         
@@ -167,7 +167,7 @@ class CabDriver():
         curr_day = state[2]
         
         
-        start_time, start_day = journey_start_time_and_start_day(state, action, Time_matrix)
+        start_time, start_day = self.journey_start_time_and_start_day(state, action, Time_matrix)
         
         if pickup == 0 and drop == 0:
             # No action so the next state's location remains the same
@@ -183,7 +183,7 @@ class CabDriver():
             
             # Action is taken. So the next state's time is incremented by time_matrix value for the pick and drop 
             # and hr and day and then other calculations are done.
-            next_time = start_time + self.time_matrix[pickup][drop][start_time][start_day] 
+            next_time = start_time + Time_matrix[pickup][drop][start_time][start_day] 
             
             
         if next_time > 23:
@@ -197,13 +197,13 @@ class CabDriver():
         else:
             next_day = start_day
             
-        next_state = (next_loc, next_time, next_day)
+        next_state = (next_loc, int(next_time), int(next_day))
         return next_state
 
     
     def step(self, state, action, Time_matrix):
-        reward = reward_func(state, action, Time_matrix)
-        next_state = next_state_func(state, action, Time_matrix)
+        reward = self.reward_func(state, action, Time_matrix)
+        next_state = self.next_state_func(state, action, Time_matrix)
 
         if next_state[2] > state[2]:
             self.days_since_start += 1
@@ -217,4 +217,6 @@ class CabDriver():
 
     def reset(self):
         self.days_since_start = 0
+        self.state_init = random.sample(self.state_space, 1)[0]
+
         return self.action_space, self.state_space, self.state_init, self.days_since_start
