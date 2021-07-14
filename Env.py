@@ -73,29 +73,30 @@ class CabDriver():
         """Determining the number of requests basis the location. 
         Use the table specified in the MDP and complete for rest of the locations"""
         location = state[0]
-        if location == 1:
-            requests = np.random.poisson(2)
+        if location == 0:
+            requests_n = np.random.poisson(2)
+        elif location == 1:
+            requests_n = np.random.poisson(12)
         elif location == 2:
-            requests = np.random.poisson(12)
+            requests_n = np.random.poisson(4)
         elif location == 3:
-            requests = np.random.poisson(4)
+            requests_n = np.random.poisson(7)
         elif location == 4:
-            requests = np.random.poisson(7)
-        elif location == 5:
-            requests = np.random.poisson(8)
+            requests_n = np.random.poisson(8)
 
 
 
         # We want to cap requests to 15
-        if requests >15:
-            requests =15
+        if requests_n >15:
+            requests_n =15
 
         # We want indexes with range(1,21)
-        possible_actions_index = random.sample(range(1, (m-1)*m + 1), requests) 
-        actions = [self.action_space[i] for i in possible_actions_idx]
+        possible_actions_index = random.sample(range(1, (m-1)*m + 1), requests_n) 
+        actions = [self.action_space[i] for i in possible_actions_index]
 
         # Append the action (0,0) which means and represents the driver chose to ignore requests.
         actions.append((0,0))
+        possible_actions_index.append(0)
 
         return possible_actions_index,actions   
 
